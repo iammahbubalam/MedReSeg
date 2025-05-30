@@ -2,14 +2,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import open_clip
-from transformers import BertModel, BertTokenizer
-from trans_de_fusion import TransformerDecoderFusion
-from feat_guided_unet import FeatureGuidedUNet
+# from transformers import BertModel, BertTokenizer
+from .trans_de_fusion import TransformerDecoderFusion
+from .feat_guided_unet import FeatureGuidedUNet
 
+from transformers import AutoTokenizer, AutoModel
 
 
 class MedCLIPUNet(nn.Module):
-    def __init__(self, num_classes=1, img_size=448):
+    def __init__(self, num_classes=1, img_size=256):  # Changed default to 256
         super().__init__()
         
         # Load pre-trained MedCLIP model
@@ -20,8 +21,10 @@ class MedCLIPUNet(nn.Module):
             param.requires_grad = False
             
         # BERT text encoder
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-        self.text_encoder = BertModel.from_pretrained('bert-base-uncased')
+        # self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        # self.text_encoder = BertModel.from_pretrained('bert-base-uncased')
+        self.tokenizer = AutoTokenizer.from_pretrained('emilyalsentzer/Bio_ClinicalBERT')
+        self.text_encoder = AutoModel.from_pretrained('emilyalsentzer/Bio_ClinicalBERT')
         
         # Freeze the text encoder to preserve the pre-trained weights
         for param in self.text_encoder.parameters():
@@ -36,8 +39,11 @@ class MedCLIPUNet(nn.Module):
             text_dim=self.text_embed_dim, 
             image_dim=self.image_embed_dim,
             hidden_dim=768,
-            nhead=8,
-            num_layers=3
+            nhead=12,
+            num_layers=6,
+            dim_feedforward=3072,
+            dropout=0.1
+    
         )
         
         # Create a feature converter to prepare for UNet
@@ -54,9 +60,16 @@ class MedCLIPUNet(nn.Module):
             feature_channels=256
         )
         
-        # Feature reshape parameters
+        # Feature reshape parameters - Fixed for proper sizing
         self.img_size = img_size
-        self.patch_size = 28  # Adjusted to 28 for compatibility with 448x448 input
+        # Use a smaller patch size to get reasonable feature map size
+        if img_size <= 256:
+            self.patch_size = 16  # 256/16 = 16x16 feature map
+        elif img_size <= 448:
+            self.patch_size = 28  # 448/28 = 16x16 feature map
+        else:
+            self.patch_size = img_size // 16  # Always aim for ~16x16 grid
+            
         self.num_patches = (img_size // self.patch_size) ** 2
         
         # Store intermediate features for loss calculation
@@ -80,6 +93,9 @@ class MedCLIPUNet(nn.Module):
         return text_features, attention_mask
     
     def encode_image(self, x):
+        
+        if x.shape[-1] != 448:
+            x = F.interpolate(x, size=(448, 448), mode='bilinear', align_corners=False)
         # Extract image features from CLIP's vision encoder
         with torch.no_grad():
             image_features = self.clip_model.encode_image(x)
@@ -88,7 +104,7 @@ class MedCLIPUNet(nn.Module):
     def forward(self, images, text_prompts):
         batch_size = images.shape[0]
         
-        # Encode images 
+        # Encode images (resized to 448x448 for CLIP)
         image_features = self.encode_image(images)  # [batch_size, embed_dim]
         self.last_image_features = image_features  # Store for loss calculation
         
@@ -105,15 +121,14 @@ class MedCLIPUNet(nn.Module):
         # Convert fused features to UNet-compatible format
         features = self.feature_converter(fused_features.squeeze(1))  # [batch_size, 256]
         
-        # Reshape features to spatial grid for UNet
-        h = w = int(self.img_size // self.patch_size)  # For 448/28 = 16
+        # Reshape features to spatial grid for UNet - FIXED calculation
+        h = w = int(self.img_size // self.patch_size)  # For 256/16 = 16x16
         features = features.view(batch_size, 256, 1, 1).expand(batch_size, 256, h, w)
         
         # Store attention maps for loss calculation
-        # We use feature maps as a proxy for attention, since they highlight regions of interest
         self.last_attention_maps = features.mean(dim=1, keepdim=True)
         
-        # Resize original images to match the UNet input size
+        # Resize original images to match the feature map size
         resized_images = F.interpolate(images, size=(h, w), 
                                       mode='bilinear', align_corners=False)
         
@@ -137,7 +152,7 @@ class MedCLIPUNet(nn.Module):
 if __name__ == '__main__':
     # Configuration for the test
     num_classes_test = 1
-    img_size_test = 448 # Should match the default or be passed to MedCLIPUNet
+    img_size_test = 256 # Should match the default or be passed to MedCLIPUNet
     batch_size_test = 2
 
     print(f"--- Testing MedCLIPUNet with dummy data ---")

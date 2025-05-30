@@ -1,7 +1,8 @@
 from torch.utils.data import DataLoader
 import os
-import random
 import torch # Add torch import for torch.utils.data.Subset
+import pandas as pd
+from sklearn.model_selection import train_test_split
 
 if __name__ == '__main__' and (__package__ is None or __package__ == ''):
     # If run as a script (e.g., python data/dataloader.py)
@@ -18,7 +19,109 @@ else:
     # If imported as a module within a package, use the original relative import
     from .dataset import MedicalSegmentationDataset, collate_fn_skip_none
 
+def create_train_val_dataloaders(csv_file_path, 
+                               data_base_dir, 
+                               batch_size=4,
+                               val_size=0.2,
+                               random_state=42,
+                               shuffle=True, 
+                               transform=None,
+                               val_transform=None,
+                               num_workers=0,
+                               pin_memory=True,
+                               num_samples=None):
+    """
+    Creates train and validation DataLoaders with proper dataset splitting.
 
+    Args:
+        csv_file_path (str): Path to the csv file with annotations.
+        data_base_dir (str): Base directory for image and mask paths.
+        batch_size (int): Batch size for both train and validation dataloaders.
+        val_size (float): Proportion of data to use for validation (0.0-1.0).
+        random_state (int): Random seed for reproducible splits.
+        shuffle (bool): Whether to shuffle training data.
+        transform (callable): Transform for training data.
+        val_transform (callable): Transform for validation data (if None, uses transform).
+        num_workers (int): Number of worker processes for data loading.
+        pin_memory (bool): Whether to use pinned memory.
+        num_samples (int): Number of samples to use (None for all).
+
+    Returns:
+        tuple: (train_dataloader, val_dataloader, train_dataset, val_dataset)
+    """
+    
+    # Read the CSV to get indices for splitting
+    df = pd.read_csv(csv_file_path)
+    
+    if len(df) == 0:
+        print(f"Warning: CSV file {csv_file_path} is empty.")
+        return None, None, None, None
+    
+    # Apply num_samples limit if specified
+    if num_samples is not None and isinstance(num_samples, int) and num_samples > 0:
+        if num_samples < len(df):
+            print(f"Using subset of {num_samples} samples from {len(df)} total samples.")
+            df = df.head(num_samples)
+        else:
+            print(f"num_samples ({num_samples}) >= dataset size ({len(df)}). Using full dataset.")
+    
+    # Split indices for train and validation
+    train_indices, val_indices = train_test_split(
+        range(len(df)),
+        test_size=val_size,
+        random_state=random_state,
+        shuffle=True
+    )
+    
+    print(f"Dataset split: {len(train_indices)} training, {len(val_indices)} validation samples")
+    
+    # Create training dataset
+    train_dataset = MedicalSegmentationDataset(
+        csv_file_path=csv_file_path,
+        data_base_dir=data_base_dir,
+        transform=transform
+    )
+    
+    if len(train_dataset) == 0:
+        print(f"Warning: Dataset created from {csv_file_path} is empty.")
+        return None, None, None, None
+    
+    # Create train subset
+    train_subset = torch.utils.data.Subset(train_dataset, train_indices)
+    
+    # Create validation dataset (with different transform if specified)
+    if val_transform is not None:
+        val_full_dataset = MedicalSegmentationDataset(
+            csv_file_path=csv_file_path,
+            data_base_dir=data_base_dir,
+            transform=val_transform
+        )
+        val_subset = torch.utils.data.Subset(val_full_dataset, val_indices)
+    else:
+        val_subset = torch.utils.data.Subset(train_dataset, val_indices)
+    
+    # Create DataLoaders
+    train_dataloader = DataLoader(
+        train_subset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        collate_fn=collate_fn_skip_none,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        drop_last=True  # Drop last incomplete batch for training
+    )
+    
+    val_dataloader = DataLoader(
+        val_subset,
+        batch_size=batch_size,
+        shuffle=False,  # Don't shuffle validation data
+        collate_fn=collate_fn_skip_none,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        drop_last=False  # Keep all validation samples
+    )
+    
+    return train_dataloader, val_dataloader, train_subset, val_subset
 
 def create_dataloader(csv_file_path, 
                       data_base_dir, 
@@ -98,8 +201,8 @@ if __name__ == '__main__':
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
     project_base_dir = os.path.abspath(os.path.join(current_script_dir, '..')) 
     
-    csv_path = os.path.join(project_base_dir, 'dataset', 'SAMed2Dv1', 'SAMed2D_image_metadata_per_mask_with_questions.csv')
-    data_root_dir = os.path.join(project_base_dir, 'dataset', 'SAMed2Dv1')
+    csv_path = os.path.join(project_base_dir, 'dataset_subset', 'SAMed2Dv1', 'subset_SAMed2D_image_metadata_per_mask_with_questions.csv')
+    data_root_dir = os.path.join(project_base_dir, 'dataset_subset', 'SAMed2Dv1')
 
     print(f"Attempting to load data from: {csv_path} with base directory: {data_root_dir}")
 
@@ -108,22 +211,20 @@ if __name__ == '__main__':
     elif not os.path.isdir(data_root_dir):
         print(f"Error: Data root directory not found at: {data_root_dir}")
     else:
-        train_dataloader, train_dataset = create_dataloader(
-            csv_file_path=csv_path,
-            data_base_dir=data_root_dir,
-            batch_size=4,
-            shuffle=True,
-            transform=None, 
-            num_workers=0
+        train_loader, val_loader, train_dataset, val_dataset = create_train_val_dataloaders(
+        csv_file_path=csv_path,
+        data_base_dir=data_root_dir,
+        batch_size=4,
+        val_size=0.2  # Use small subset for testing
         )
 
-        if train_dataloader and train_dataset:
+        if train_loader and train_dataset:
             print(f"DataLoader and Dataset created successfully.")
             print(f"Dataset contains {len(train_dataset)} samples (pre-skip count).")
             print(f"DataLoader will serve batches of size 4.")
 
             print("\nTesting DataLoader iteration (first few batches):")
-            for i, batch_data in enumerate(train_dataloader):
+            for i, batch_data in enumerate(train_loader):
                 if batch_data is None: 
                     print(f"Batch {i} was skipped (all samples in batch were None).")
                     continue

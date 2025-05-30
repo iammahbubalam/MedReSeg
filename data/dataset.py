@@ -142,7 +142,7 @@ class MedicalSegmentationDataset(Dataset):
             "mask": transformed_mask,
             "image_type": image_type,
             "id_details": id_details,
-            "question": question,
+            "prompt": question,
             "image_path": img_full_path, # Storing full path for reference
             "mask_path": mask_full_path   # Storing full path for reference
             # "original_size": original_size 
