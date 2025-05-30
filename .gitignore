@@ -52,7 +52,6 @@ data/
 SAMed2Dv1/SAMed2Dv1/
 95_Glioma/
 datasets/
-dataset_subset/
 processed_data/
 raw_data/
 images/
