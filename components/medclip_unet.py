@@ -1,11 +1,10 @@
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import open_clip
-from transformers import BertTokenizer, BertModel
-from components import TransformerDecoderFusion
-from components.feat_guided_unet import FeatureGuidedUNet
+from transformers import BertModel, BertTokenizer
+from trans_de_fusion import TransformerDecoderFusion
+from feat_guided_unet import FeatureGuidedUNet
 
 
 
@@ -17,7 +16,7 @@ class MedCLIPUNet(nn.Module):
         self.clip_model, _, _ = open_clip.create_model_and_transforms('hf-hub:luhuitong/CLIP-ViT-L-14-448px-MedICaT-ROCO')
         
         # Freeze the CLIP model to preserve the pre-trained weights
-        for param in self.clip_model.parameters():
+        for param in self.clip_model.parameters(): 
             param.requires_grad = False
             
         # BERT text encoder
@@ -134,3 +133,86 @@ class MedCLIPUNet(nn.Module):
             'text_features': self.last_text_features,
             'attention_maps': self.last_attention_maps
         }
+
+if __name__ == '__main__':
+    # Configuration for the test
+    num_classes_test = 1
+    img_size_test = 448 # Should match the default or be passed to MedCLIPUNet
+    batch_size_test = 2
+
+    print(f"--- Testing MedCLIPUNet with dummy data ---")
+    print(f"Model parameters: num_classes={num_classes_test}, img_size={img_size_test}")
+    print(f"Test data: batch_size={batch_size_test}")
+
+    # Instantiate the model
+    # Ensure the device is consistent, defaulting to CPU for this test if CUDA not explicitly handled
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+
+    try:
+        model = MedCLIPUNet(num_classes=num_classes_test, img_size=img_size_test).to(device)
+        model.eval() # Set to evaluation mode for testing (disables dropout, etc.)
+        print("MedCLIPUNet model instantiated successfully.")
+    except Exception as e:
+        print(f"Error instantiating MedCLIPUNet model: {e}")
+        import traceback
+        traceback.print_exc()
+        exit()
+
+    # Create dummy input data
+    # Dummy images: (batch_size, 3, img_size, img_size)
+    # Assuming input images are 3-channel RGB
+    dummy_images = torch.randn(batch_size_test, 3, img_size_test, img_size_test).to(device)
+    
+    # Dummy text prompts
+    dummy_text_prompts = [
+        "Segment the liver in this CT scan.",
+        "Highlight the tumor region in the MRI image."
+    ]
+    if batch_size_test == 1:
+        dummy_text_prompts = [dummy_text_prompts[0]]
+    elif batch_size_test > 2:
+        dummy_text_prompts = dummy_text_prompts * (batch_size_test // 2) + dummy_text_prompts[:batch_size_test % 2]
+
+
+    print(f"\\nPerforming forward pass...")
+    print(f"  Input images shape: {dummy_images.shape}")
+    print(f"  Input text prompts (example): '{dummy_text_prompts[0]}'")
+
+    try:
+        # Forward pass
+        with torch.no_grad(): # No need to track gradients during testing
+            segmentation_output = model(dummy_images, dummy_text_prompts)
+        
+        print(f"\\nForward pass successful.")
+        print(f"  Output segmentation mask shape: {segmentation_output.shape}")
+
+        # Verify output shape
+        expected_output_shape = (batch_size_test, num_classes_test, img_size_test, img_size_test)
+        if segmentation_output.shape == expected_output_shape:
+            print(f"  Output shape is as expected.")
+        else:
+            print(f"  WARNING: Output shape {segmentation_output.shape} does not match expected {expected_output_shape}.")
+
+        # Test get_last_features
+        print(f"\\nTesting get_last_features()...")
+        last_features = model.get_last_features()
+        if last_features['image_features'] is not None:
+            print(f"  Shape of last_image_features: {last_features['image_features'].shape}")
+        else:
+            print(f"  last_image_features is None")
+        if last_features['text_features'] is not None:
+            print(f"  Shape of last_text_features: {last_features['text_features'].shape}")
+        else:
+            print(f"  last_text_features is None")
+        if last_features['attention_maps'] is not None:
+            print(f"  Shape of last_attention_maps: {last_features['attention_maps'].shape}")
+        else:
+            print(f"  last_attention_maps is None")
+
+    except Exception as e:
+        print(f"\\nError during forward pass or feature retrieval: {e}")
+        import traceback
+        traceback.print_exc()
+
+    print("\\n--- MedCLIPUNet test finished ---")

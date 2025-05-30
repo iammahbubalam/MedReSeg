@@ -106,3 +106,58 @@ class FeatureGuidedUNet(nn.Module):
         
         # Final output
         return self.final_conv(x)
+
+if __name__ == '__main__':
+    # Model parameters
+    in_channels = 3
+    out_channels = 1
+    feature_channels = 256 # This should match the feature_channels used in model init
+
+    # Dummy input data
+    batch_size = 2
+    img_height = 256 # Example height
+    img_width = 256  # Example width
+
+    # Create dummy input image tensor
+    # Shape: (batch_size, in_channels, img_height, img_width)
+    dummy_x = torch.randn(batch_size, in_channels, img_height, img_width)
+    
+    # Create dummy feature tensor
+    # Shape: (batch_size, feature_channels, img_height, img_width)
+    # The feature map is initially the same spatial size as the input image.
+    # The model's forward pass will interpolate it to match encoder stage dimensions.
+    dummy_features = torch.randn(batch_size, feature_channels, img_height, img_width)
+
+    # Instantiate the model
+    model = FeatureGuidedUNet(in_channels=in_channels, out_channels=out_channels, feature_channels=feature_channels)
+    
+    print(f"FeatureGuidedUNet model instantiated.")
+    print(f"  Input image channels: {in_channels}")
+    print(f"  Output mask channels: {out_channels}")
+    print(f"  Guidance feature channels: {feature_channels}")
+
+    # Perform a forward pass
+    print(f"\\nPerforming forward pass with dummy data:")
+    print(f"  Input image shape: {dummy_x.shape}")
+    print(f"  Guidance features shape: {dummy_features.shape}")
+    
+    try:
+        output_mask = model(dummy_x, dummy_features)
+        print(f"  Output mask shape: {output_mask.shape}")
+        
+        # Check if output shape matches expected output shape
+        # Expected: (batch_size, out_channels, img_height, img_width)
+        # U-Net typically preserves spatial dimensions or they can be controlled by padding/stride.
+        # In this case, with kernel_size=2, stride=2 for upconv, it should match input H, W.
+        expected_output_shape = (batch_size, out_channels, img_height, img_width)
+        if output_mask.shape == expected_output_shape:
+            print(f"  Output shape is as expected.")
+        else:
+            print(f"  WARNING: Output shape {output_mask.shape} does not match expected {expected_output_shape}.")
+
+    except Exception as e:
+        print(f"  Error during forward pass: {e}")
+        import traceback
+        traceback.print_exc()
+
+    print("\\nTest finished.")
