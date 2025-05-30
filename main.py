@@ -1,8 +1,8 @@
 
 
-from data.dataloader import create_dataloaders
-from model.med_clip_unet import MedCLIPUNet 
-from train import train_model
+from data.dataloader import create_dataloader
+from components.medclip_unet import MedCLIPUNet 
+from traintest.train import train_model
 import torch
 import os
 import random
@@ -19,12 +19,27 @@ if __name__ == "__main__":
     print(f"Image directory: {IMAGE_DIR}")
     print(f"Mask directory: {MASK_DIR}")
     
-    # Create data loaders
-    train_loader, val_loader = create_dataloaders(
-        image_dir=IMAGE_DIR,
-        mask_dir=MASK_DIR,
-        batch_size=4
-    )
+    current_script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_base_dir = os.path.abspath(os.path.join(current_script_dir, '..')) 
+    
+    csv_path = os.path.join(project_base_dir, 'dataset', 'SAMed2Dv1', 'SAMed2D_image_metadata_per_mask_with_questions.csv')
+    data_root_dir = os.path.join(project_base_dir, 'dataset', 'SAMed2Dv1')
+
+    print(f"Attempting to load data from: {csv_path} with base directory: {data_root_dir}")
+
+    if not os.path.exists(csv_path):
+        print(f"Error: CSV file not found at: {csv_path}")
+    elif not os.path.isdir(data_root_dir):
+        print(f"Error: Data root directory not found at: {data_root_dir}")
+    else:
+        train_dataloader, train_dataset = create_dataloader(
+            csv_file_path=csv_path,
+            data_base_dir=data_root_dir,
+            batch_size=4,
+            shuffle=True,
+            transform=None, 
+            num_workers=0
+        )
     
     # Initialize model with img_size=448 to match input images
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -34,7 +49,7 @@ if __name__ == "__main__":
     # Train model with multi-task loss
     trained_model = train_model(
         model=model,
-        train_loader=train_loader,
+        train_loader=train_dataloader,
         val_loader=val_loader,
         device=device,
         num_epochs=1,
