@@ -1,0 +1,41 @@
+dataset_name,image_path,image_type,mask_path,ID_details,question
+ACDC,images/mr_00--ACDC--patient002_frame01--x_0009.png,MRI,masks/mr_00--ACDC--patient002_frame01--x_0009--0003_000.png,union_heart_myocardium_heart_ventricle_right,"Segment the regions encompassing the heart, its outer wall, and the right ventricle."
+ACDC,images/mr_00--ACDC--patient009_frame01--x_0005.png,MRI,masks/mr_00--ACDC--patient009_frame01--x_0005--0000_000.png,heart_myocardium,Segment the heart muscle.
+ACDC,images/mr_00--ACDC--patient009_frame13--x_0000.png,MRI,masks/mr_00--ACDC--patient009_frame13--x_0000--0002_000.png,heart_ventricle_right,Segment the right ventricle of the heart.
+ACDC,images/mr_00--ACDC--patient015_frame01--x_0005.png,MRI,masks/mr_00--ACDC--patient015_frame01--x_0005--0000_000.png,heart_myocardium,Segment the heart muscle.
+ACDC,images/mr_00--ACDC--patient023_frame01--x_0001.png,MRI,masks/mr_00--ACDC--patient023_frame01--x_0001--0001_000.png,heart_ventricle_left,Segment the left ventricle of the heart in these MRI images.
+ACDC,images/mr_00--ACDC--patient032_frame12--x_0003.png,MRI,masks/mr_00--ACDC--patient032_frame12--x_0003--0000_000.png,heart_myocardium,Segment the heart muscle.
+ACDC,images/mr_00--ACDC--patient059_frame09--x_0001.png,MRI,masks/mr_00--ACDC--patient059_frame09--x_0001--0002_000.png,heart_ventricle_right,Segment the right ventricle of the heart.
+ACDC,images/mr_00--ACDC--patient059_frame09--x_0004.png,MRI,masks/mr_00--ACDC--patient059_frame09--x_0004--0001_000.png,heart_ventricle_left,Segment the left ventricle of the heart in these cardiac MRI images.
+ACDC,images/mr_00--ACDC--patient074_frame12--x_0003.png,MRI,masks/mr_00--ACDC--patient074_frame12--x_0003--0003_000.png,union_heart_myocardium_heart_ventricle_right,"Can you segment the heart, including its outer wall and the right ventricle?"
+ACDC,images/mr_00--ACDC--patient088_frame12--x_0007.png,MRI,masks/mr_00--ACDC--patient088_frame12--x_0007--0003_000.png,union_heart_myocardium_heart_ventricle_right,"Identify and segment the heart, including the outer wall and both ventricles."
+AMOS2022,images/ct_00--AMOS2022--amos_0006--x_0019.png,CT,masks/ct_00--AMOS2022--amos_0006--x_0019--0001_000.png,bladder,Segment the bladder in this CT scan.
+AMOS2022,images/ct_00--AMOS2022--amos_0011--x_0050.png,CT,masks/ct_00--AMOS2022--amos_0011--x_0050--0002_000.png,inferior_vena_cava,Segment the inferior vena cava.
+AMOS2022,images/ct_00--AMOS2022--amos_0024--x_0024.png,CT,masks/ct_00--AMOS2022--amos_0024--x_0024--0000_000.png,prostate_and_uterus,Segment the prostate and uterus in these CT images.
+AMOS2022,images/ct_00--AMOS2022--amos_0027--x_0062.png,CT,masks/ct_00--AMOS2022--amos_0027--x_0062--0007_000.png,liver,Segment the liver in this CT scan.
+AMOS2022,images/ct_00--AMOS2022--amos_0043--x_0057.png,CT,masks/ct_00--AMOS2022--amos_0043--x_0057--0004_000.png,duodenum,Segment the duodenum in these images.
+AMOS2022,images/ct_00--AMOS2022--amos_0045--x_0076.png,CT,masks/ct_00--AMOS2022--amos_0045--x_0076--0010_000.png,stomach,Segment the stomach in these CT images.
+AMOS2022,images/ct_00--AMOS2022--amos_0045--x_0056.png,CT,masks/ct_00--AMOS2022--amos_0045--x_0056--0005_000.png,kidney_left,Segment the left kidney in the provided CT scan.
+AMOS2022,images/ct_00--AMOS2022--amos_0050--x_0061.png,CT,masks/ct_00--AMOS2022--amos_0050--x_0061--0011_000.png,spleen,Segment the spleen.
+AMOS2022,images/ct_00--AMOS2022--amos_0060--x_0089.png,CT,masks/ct_00--AMOS2022--amos_0060--x_0089--0003_000.png,aorta,Segment the aorta.
+AMOS2022,images/ct_00--AMOS2022--amos_0084--x_0058.png,CT,masks/ct_00--AMOS2022--amos_0084--x_0058--0012_000.png,pancreas,Segment the pancreas.
+AMOS2022,images/ct_00--AMOS2022--amos_0092--x_0052.png,CT,masks/ct_00--AMOS2022--amos_0092--x_0052--0004_000.png,duodenum,Segment the duodenum.
+AMOS2022,images/ct_00--AMOS2022--amos_0098--x_0059.png,CT,masks/ct_00--AMOS2022--amos_0098--x_0059--0005_000.png,kidney_left,Segment the left kidney.
+AMOS2022,images/ct_00--AMOS2022--amos_0094--x_0074.png,CT,masks/ct_00--AMOS2022--amos_0094--x_0074--0007_000.png,liver,Segment the liver.
+AMOS2022,images/ct_00--AMOS2022--amos_0104--x_0056.png,CT,masks/ct_00--AMOS2022--amos_0104--x_0056--0012_000.png,pancreas,Segment the pancreas in this CT scan.
+AMOS2022,images/ct_00--AMOS2022--amos_0110--x_0059.png,CT,masks/ct_00--AMOS2022--amos_0110--x_0059--0005_000.png,kidney_left,Segment the left kidney in this CT scan.
+AMOS2022,images/ct_00--AMOS2022--amos_0110--x_0067.png,CT,masks/ct_00--AMOS2022--amos_0110--x_0067--0007_000.png,liver,Segment the liver in this CT scan.
+AMOS2022,images/ct_00--AMOS2022--amos_0115--x_0060.png,CT,masks/ct_00--AMOS2022--amos_0115--x_0060--0004_001.png,duodenum,Segment the duodenum in this CT scan.
+AMOS2022,images/ct_00--AMOS2022--amos_0127--x_0074.png,CT,masks/ct_00--AMOS2022--amos_0127--x_0074--0002_000.png,inferior_vena_cava,Segment the inferior vena cava.
+AMOS2022,images/ct_00--AMOS2022--amos_0126--x_0063.png,CT,masks/ct_00--AMOS2022--amos_0126--x_0063--0003_000.png,aorta,Segment the aorta in this CT image.
+AMOS2022,images/ct_00--AMOS2022--amos_0159--x_0060.png,CT,masks/ct_00--AMOS2022--amos_0159--x_0060--0006_000.png,kidney_right,Segment the right kidney in the provided CT scan.
+AMOS2022,images/ct_00--AMOS2022--amos_0158--x_0070.png,CT,masks/ct_00--AMOS2022--amos_0158--x_0070--0018_000.png,gallbladder,Segment the gallbladder in this CT image.
+AMOS2022,images/ct_00--AMOS2022--amos_0193--x_0061.png,CT,masks/ct_00--AMOS2022--amos_0193--x_0061--0007_000.png,liver,Segment the liver in this CT scan.
+AMOS2022,images/ct_00--AMOS2022--amos_0198--x_0053.png,CT,masks/ct_00--AMOS2022--amos_0198--x_0053--0010_000.png,stomach,Segment the stomach in the provided CT scans.
+AMOS2022,images/ct_00--AMOS2022--amos_0214--x_0214.png,CT,masks/ct_00--AMOS2022--amos_0214--x_0214--0003_000.png,aorta,Segment the aorta in these CT scans.
+AMOS2022,images/ct_00--AMOS2022--amos_0217--x_0100.png,CT,masks/ct_00--AMOS2022--amos_0217--x_0100--0003_000.png,aorta,Segment the aorta in this medical image.
+AMOS2022,images/ct_00--AMOS2022--amos_0224--x_0022.png,CT,masks/ct_00--AMOS2022--amos_0224--x_0022--0001_000.png,bladder,Segment the bladder in this CT image.
+AMOS2022,images/ct_00--AMOS2022--amos_0217--x_0171.png,CT,masks/ct_00--AMOS2022--amos_0217--x_0171--0010_000.png,stomach,Segment the stomach in this medical image.
+AMOS2022,images/ct_00--AMOS2022--amos_0235--x_0182.png,CT,masks/ct_00--AMOS2022--amos_0235--x_0182--0019_000.png,esophagus,Segment the esophagus.
+AMOS2022,images/ct_00--AMOS2022--amos_0239--x_0218.png,CT,masks/ct_00--AMOS2022--amos_0239--x_0218--0003_000.png,aorta,Segment the aorta in this image.
+AMOS2022,images/ct_00--AMOS2022--amos_0237--x_0159.png,CT,masks/ct_00--AMOS2022--amos_0237--x_0159--0012_001.png,pancreas,Segment the pancreas.
