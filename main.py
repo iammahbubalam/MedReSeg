@@ -2,7 +2,7 @@
 
 from data.dataloader import create_dataloaders
 from model.med_clip_unet import MedCLIPUNet 
-from train_test.train import train_model
+from train import train_model
 import torch
 import os
 import random

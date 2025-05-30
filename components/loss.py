@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision.transforms.functional as TF
-from monai.losses import DiceLoss, DiceCELoss, TverskyLoss, FocalLoss, HausdorffDTLoss
+from monai.losses.dice import DiceLoss, DiceCELoss
+from monai.losses.tversky import TverskyLoss
+from monai.losses.focal_loss import FocalLoss
+from monai.losses.hausdorff_loss import HausdorffDTLoss
 from torch.nn.functional import mse_loss, cosine_embedding_loss
 
 
