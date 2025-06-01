@@ -34,7 +34,7 @@ class MedicalSegmentationDataset(Dataset):
         self.data_frame['question'] = self.data_frame['question'].fillna("No question provided.")
         
         # Ensure other required columns exist
-        required_columns = ['image_path', 'mask_path', 'image_type', 'ID_details']
+        required_columns = ['image_path', 'mask_path', 'image_type']
         for col in required_columns:
             if col not in self.data_frame.columns:
                 raise ValueError(f"CSV file must contain a '{col}' column.")
@@ -49,7 +49,7 @@ class MedicalSegmentationDataset(Dataset):
         img_rel_path = self.data_frame.loc[idx, 'image_path']
         mask_rel_path = self.data_frame.loc[idx, 'mask_path']
         image_type = self.data_frame.loc[idx, 'image_type']
-        id_details = str(self.data_frame.loc[idx, 'ID_details']).replace('_'," ")
+        # id_details = str(self.data_frame.loc[idx, 'ID_details']).replace('_'," ")
         question = self.data_frame.loc[idx, 'question']
 
         img_full_path = os.path.join(self.data_base_dir, img_rel_path)
@@ -141,7 +141,6 @@ class MedicalSegmentationDataset(Dataset):
             "image": transformed_image,
             "mask": transformed_mask,
             "image_type": image_type,
-            "id_details": id_details,
             "prompt": question,
             "image_path": img_full_path, # Storing full path for reference
             "mask_path": mask_full_path   # Storing full path for reference
@@ -216,7 +215,6 @@ if __name__ == '__main__':
                 print(f"  Image shape: {sample['image'].shape}")
                 print(f"  Mask shape: {sample['mask'].shape}")
                 print(f"  Image type: {sample['image_type']}")
-                print(f"  ID details: {sample['id_details']}")
                 print(f"  Question: {sample['question']}")
                 print(f"  Image path: {sample['image_path']}")
                 print(f"  Mask path: {sample['mask_path']}")

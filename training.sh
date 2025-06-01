@@ -9,8 +9,8 @@
 # --- Training Configuration ---
 SEED=42
 # Adjust these paths if your dataset is located elsewhere
-CSV_PATH="dataset_subset/SAMed2Dv1/subset_SAMed2D_image_metadata_per_mask_with_questions.csv"
-DATA_ROOT_DIR="dataset_subset/SAMed2Dv1"
+CSV_PATH="datasets/image_to_mask_mapping_with_metadata.csv"
+DATA_ROOT_DIR="datasets/"
 VAL_SIZE=0.2
 NUM_WORKERS=0 # Set to 0 for Windows, or a positive integer for Linux/macOS if beneficial
 
