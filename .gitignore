@@ -54,6 +54,7 @@ SAMed2Dv1/SAMed2Dv1/
 datasets/
 processed_data/
 raw_data/
+dataset_subset/
 # *.csv
 *.h5
 *.npy

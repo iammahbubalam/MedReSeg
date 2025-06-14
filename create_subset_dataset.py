@@ -73,6 +73,11 @@ def create_subset(original_csv_path, original_data_root_dir, subset_base_dir, nu
         valid_image_copied = False
         valid_mask_copied = False
 
+
+        print(f"Processing row index {index}:")
+        print(f"  Image: {src_img_full_path} -> {dest_img_full_path}")
+        print(f"  Mask: {src_mask_full_path} -> {dest_mask_full_path}")
+
         # Check and copy image
         if os.path.exists(src_img_full_path):
             if os.path.getsize(src_img_full_path) > 0:
@@ -148,14 +153,13 @@ def create_subset(original_csv_path, original_data_root_dir, subset_base_dir, nu
 
 if __name__ == "__main__":
     # This script assumes it's located in the MedReSeg project root directory.
-    project_root_dir = os.path.dirname(os.path.abspath(__file__)) 
     
     # Define paths relative to the project root
-    original_csv = os.path.join(project_root_dir, 'dataset', 'SAMed2Dv1', 'SAMed2D_image_metadata_per_mask_with_questions.csv')
-    original_data_root = os.path.join(project_root_dir, 'dataset', 'SAMed2Dv1') # Base for original images/masks
+    original_csv = "/content/drive/MyDrive/datasets/image_to_mask_mapping_with_metadata.csv"
+    original_data_root = "/content/drive/MyDrive/datasets" # Base for original images/masks
     
     # Destination for the subset
-    subset_destination_base = os.path.join(project_root_dir, 'dataset_subset', 'SAMed2Dv1')
+    subset_destination_base = "/content/drive/MyDrive/dataset_subset" 
     
     number_of_rows_to_subset = 100 # You can change this value
     
