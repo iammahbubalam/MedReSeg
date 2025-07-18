@@ -82,6 +82,7 @@ def run_inference(args):
     
     model_file_to_load = args.model_path  # Initialize with the user-provided path
 
+    # Check if the provided path is a directory or a file
     if os.path.isdir(args.model_path):
         print(f"Warning: The provided model_path ('{args.model_path}') is a directory.")
         print(f"torch.load() typically expects a file path to a checkpoint.")
@@ -89,50 +90,37 @@ def run_inference(args):
             files_in_dir = os.listdir(args.model_path)
             print(f"Contents of this directory: {files_in_dir}")
 
-            # Check for unzipped torch.save() archive structure
-            is_unzipped_archive = ('data.pkl' in files_in_dir or 'data.plk' in files_in_dir) and \
-                                  'version' in files_in_dir and \
-                                  'data' in files_in_dir and os.path.isdir(os.path.join(args.model_path, 'data'))
+            # Look for .pt files specifically
+            pt_files = [f for f in files_in_dir if f.endswith('.pt')]
+            pth_files = [f for f in files_in_dir if f.endswith(('.pth', '.pth.tar'))]
+            all_model_files = pt_files + pth_files
 
-            if is_unzipped_archive:
-                print(f"Error: The path '{args.model_path}' appears to be a directory containing unzipped components of a PyTorch saved file (e.g., data.pkl/data.plk, version, data/).")
-                print(f"torch.load() cannot directly load such a directory. Please provide the path to the original single archive file that torch.save() created.")
-                return
-            else:
-                # Look for checkpoint files (including .pth.tar format from your save_checkpoint function)
-                potential_ckpts = [f for f in files_in_dir if f.endswith(('.ckpt', '.pth', '.pt', '.pth.tar'))]
-                
-                # Prioritize model_best.pth.tar if it exists
-                best_checkpoints = [f for f in potential_ckpts if 'model_best' in f]
+            if pt_files:
+                if 'medclip_unet_run1.pt' in pt_files:
+                    model_file_to_load = os.path.join(args.model_path, 'medclip_unet_run1.pt')
+                    print(f"Found target model file: '{model_file_to_load}'")
+                else:
+                    model_file_to_load = os.path.join(args.model_path, pt_files[0])
+                    print(f"Using first .pt file found: '{model_file_to_load}'")
+            elif pth_files:
+                # Fallback to .pth files
+                best_checkpoints = [f for f in pth_files if 'model_best' in f]
                 if best_checkpoints:
                     model_file_to_load = os.path.join(args.model_path, best_checkpoints[0])
-                    print(f"Found best model checkpoint: '{model_file_to_load}'. Will attempt to load this.")
-                elif len(potential_ckpts) == 1:
-                    model_file_to_load = os.path.join(args.model_path, potential_ckpts[0])
-                    print(f"Found a single checkpoint file: '{model_file_to_load}'. Will attempt to load this.")
-                elif len(potential_ckpts) > 1:
-                    # Sort by epoch number if they follow checkpoint_epoch_X format
-                    epoch_checkpoints = [f for f in potential_ckpts if 'checkpoint_epoch_' in f]
-                    if epoch_checkpoints:
-                        # Sort by epoch number (extract number from filename)
-                        try:
-                            epoch_checkpoints.sort(key=lambda x: int(x.split('epoch_')[1].split('.')[0]))
-                            latest_checkpoint = epoch_checkpoints[-1]  # Get the highest epoch
-                            model_file_to_load = os.path.join(args.model_path, latest_checkpoint)
-                            print(f"Found multiple epoch checkpoints. Using latest: '{model_file_to_load}'")
-                        except (ValueError, IndexError):
-                            print(f"Error: Multiple checkpoint files found but couldn't determine latest: {potential_ckpts}")
-                            print(f"Please specify the direct path to the desired checkpoint file.")
-                            return
-                    else:
-                        print(f"Error: Multiple checkpoint files ({potential_ckpts}) found in directory '{args.model_path}'.")
-                        print(f"Please specify the direct path to one of these files in --model_path.")
-                        return
+                    print(f"Found best model checkpoint: '{model_file_to_load}'")
                 else:
-                    print(f"Error: No checkpoint files (.ckpt, .pth, .pt, .pth.tar) found in directory '{args.model_path}'.")
-                    return
+                    model_file_to_load = os.path.join(args.model_path, pth_files[0])
+                    print(f"Using first .pth file found: '{model_file_to_load}'")
+            else:
+                print(f"Error: No model files (.pt, .pth, .pth.tar) found in directory '{args.model_path}'.")
+                return
         except OSError as e:
             print(f"Error listing contents of directory '{args.model_path}': {e}")
+            return
+    else:
+        # Direct file path provided
+        if not os.path.isfile(args.model_path):
+            print(f"Error: Model file not found at {args.model_path}")
             return
 
     try:
@@ -144,112 +132,73 @@ def run_inference(args):
             return
             
         file_size = os.path.getsize(model_file_to_load)
-        print(f"Checkpoint file size: {file_size} bytes")
+        print(f"Model file size: {file_size} bytes ({file_size / (1024*1024):.2f} MB)")
+        
         if file_size < 1000:  # Very small file, likely corrupted
-            print(f"Warning: Checkpoint file is very small ({file_size} bytes). It may be corrupted.")
+            print(f"Warning: Model file is very small ({file_size} bytes). It may be corrupted.")
         
-        # Load checkpoint with weights_only=False for legacy .tar format
-        print(f"=> Loading checkpoint '{model_file_to_load}'")
-
+        # Load the model - try different strategies for .pt files
+        print(f"=> Loading model '{model_file_to_load}'")
         
-        # Try different loading strategies
-        checkpoint = None
-        loading_strategies = [
-            ("Standard loading", lambda: torch.load(model_file_to_load, map_location=device, weights_only=False)),
-            ("Pickle protocol 2", lambda: torch.load(model_file_to_load, map_location=device, weights_only=False, pickle_module=None)),
-        ]
-        
-        for strategy_name, loading_func in loading_strategies:
-            try:
-                print(f"=> Trying {strategy_name}...")
-                checkpoint = loading_func()
-                print(f"=> Success with {strategy_name}")
-                break
-            except Exception as strategy_error:
-                print(f"=> {strategy_name} failed: {str(strategy_error)[:100]}...")
-                continue
-        
-        if checkpoint is None:
-            print(f"=> All loading strategies failed. The checkpoint file appears to be severely corrupted.")
-            print(f"=> Suggestions:")
-            print(f"   1. Try a different checkpoint file from your training run")
-            print(f"   2. Check if you have other epoch checkpoints in: checkpoints/epochs/")
-            print(f"   3. Re-run training to generate new checkpoints")
-            print(f"   4. Verify your filesystem integrity")
-            return
-        
-        # Diagnostic: print checkpoint keys for debugging
-        if isinstance(checkpoint, dict):
-            print(f"Checkpoint keys: {list(checkpoint.keys())}")
+        try:
+            # First try: Load as direct state_dict (common for .pt files)
+            print("=> Attempting to load as direct state_dict...")
+            state_dict = torch.load(model_file_to_load, map_location=device, weights_only=False)
             
-            # Check if this is a proper checkpoint with expected keys
-            if 'state_dict' in checkpoint:
-                print("=> Found 'state_dict' in checkpoint")
-                try:
-                    # Additional verification: check if state_dict is valid
-                    state_dict = checkpoint['state_dict']
-                    if not isinstance(state_dict, dict) or len(state_dict) == 0:
-                        print("=> Error: state_dict is empty or invalid")
-                        return
+            if isinstance(state_dict, dict):
+                # Check if it's a nested checkpoint or direct state_dict
+                if 'state_dict' in state_dict:
+                    print("=> Found nested 'state_dict' key in loaded data")
+                    actual_state_dict = state_dict['state_dict']
                     
-                    print(f"=> state_dict contains {len(state_dict)} parameter tensors")
-                    model.load_state_dict(state_dict)
-                    print("=> Successfully loaded model state_dict from checkpoint")
-                    
-                    # Print additional checkpoint info if available
-                    if 'epoch' in checkpoint:
-                        completed_epoch = checkpoint['epoch']
-                        print(f"=> Model was saved after completing epoch {completed_epoch}")
-                    if 'best_metric' in checkpoint:
-                        best_metric = checkpoint['best_metric']
-                        print(f"=> Best metric from training: {best_metric:.4f}")
-                    if 'optimizer' in checkpoint:
-                        print("=> Checkpoint also contains optimizer state (not loaded for inference)")
-                        
-                except Exception as e:
-                    print(f"=> Error loading state_dict: {e}")
-                    print("This could indicate architecture mismatch or corrupted state_dict.")
-                    # Try to provide more specific error information
-                    if "size mismatch" in str(e).lower():
-                        print("=> This appears to be a model architecture mismatch.")
-                        print("=> Verify that --num_classes and --img_size match your trained model.")
+                    # Print additional info if available
+                    if 'epoch' in state_dict:
+                        print(f"=> Model was saved after epoch {state_dict['epoch']}")
+                    if 'best_metric' in state_dict:
+                        print(f"=> Best metric: {state_dict['best_metric']:.4f}")
+                else:
+                    print("=> Loading as direct state_dict")
+                    actual_state_dict = state_dict
+                
+                # Verify state_dict is valid
+                if not isinstance(actual_state_dict, dict) or len(actual_state_dict) == 0:
+                    print("=> Error: state_dict is empty or invalid")
                     return
                 
+                print(f"=> state_dict contains {len(actual_state_dict)} parameter tensors")
+                
+                # Load state_dict into model
+                model.load_state_dict(actual_state_dict)
+                print("=> Successfully loaded model state_dict")
+                
             else:
-                # Try to load directly as state_dict (fallback)
-                print("=> No 'state_dict' key found, attempting to load as direct state_dict")
-                try:
-                    if not isinstance(checkpoint, dict) or len(checkpoint) == 0:
-                        print("=> Error: checkpoint is empty or not a dictionary")
-                        return
-                    
-                    model.load_state_dict(checkpoint)
-                    print("=> Successfully loaded raw model state_dict")
-                except Exception as e:
-                    print(f"=> Error loading checkpoint as direct state_dict: {e}")
-                    print("Checkpoint might be corrupted or in unexpected format.")
-                    return
-        else:
-            print(f"=> Error: Unexpected checkpoint format. Expected dict, got {type(checkpoint)}")
+                print(f"=> Error: Expected dict, got {type(state_dict)}")
+                return
+                
+        except Exception as load_error:
+            print(f"=> Error loading model: {load_error}")
+            
+            # Provide specific guidance for common issues
+            error_str = str(load_error).lower()
+            if "size mismatch" in error_str:
+                print("=> This appears to be a model architecture mismatch.")
+                print("=> Verify that --num_classes and --img_size match your trained model.")
+                print(f"=> Current settings: num_classes={args.num_classes}, img_size={args.img_size}")
+            elif "key" in error_str and "missing" in error_str:
+                print("=> Some model parameters are missing. This might be due to:")
+                print("   1. Architecture changes between training and inference")
+                print("   2. Partial model save during training")
+            elif "unexpected key" in error_str:
+                print("=> Extra parameters found. This might be due to:")
+                print("   1. Different model architecture")
+                print("   2. Including optimizer/scheduler states")
+            
             return
             
     except Exception as e:
-        error_str = str(e).lower()
-        if "storages" in error_str or "filename" in error_str:
-            print(f"=> Error: Checkpoint file appears to be corrupted: {e}")
-            print("This error suggests the .pth.tar file is incomplete or damaged.")
-            print("=> Troubleshooting steps:")
-            print("   1. Check if you have other checkpoint files in checkpoints/epochs/ or checkpoints/best/")
-            print("   2. Try loading a different epoch checkpoint")
-            print("   3. Verify the file wasn't corrupted during transfer or storage")
-            print("   4. Re-run training if no valid checkpoints are available")
-        elif "weights_only" in error_str:
-            print(f"=> Error: PyTorch version requires weights_only=False for legacy format: {e}")
-            print("This has been handled automatically, but the checkpoint may still be corrupted.")
-        else:
-            print(f"=> Error loading checkpoint from {model_file_to_load}: {e}")
-            print("Traceback for debugging:")
-            traceback.print_exc(limit=3)
+        print(f"=> Critical error loading model from {model_file_to_load}: {e}")
+        print("=> Full traceback:")
+        traceback.print_exc()
         return
 
     model.to(device)
@@ -257,17 +206,35 @@ def run_inference(args):
     print("Model loaded successfully and set to evaluation mode.")
 
     # 2. Load Data
-    print(f"Loading inference data from CSV: {args.csv_path} and Root: {args.data_root_dir}")
+    print(f"Loading inference data from CSV: {args.csv_path}")
+    print(f"Data root directory: {args.data_root_dir}")
+    
+    # Validate that the CSV file exists
+    if not os.path.isfile(args.csv_path):
+        print(f"Error: CSV file not found at {args.csv_path}")
+        print("Please ensure the CSV file exists and contains columns: image_path, mask_path, question")
+        return
+    
+    # Validate that the data root directory exists
+    if not os.path.isdir(args.data_root_dir):
+        print(f"Error: Data root directory not found at {args.data_root_dir}")
+        print("Please ensure the dataset_subset directory exists and contains the image/mask data")
+        return
+    
     try:
-        # Note: MedicalSegmentationDataset's default transform might need img_size.
-        # Ensure your dataset version handles this or provide a custom transform.
+        # Create the dataset
         inference_dataset = MedicalSegmentationDataset(
             csv_file_path=args.csv_path,
             data_base_dir=args.data_root_dir,
-            transform=None # Pass a custom transform if needed
+            transform=None  # Use default transforms from dataset
         )
+        
         if len(inference_dataset) == 0:
-            print("Inference dataset is empty. Exiting.")
+            print("Error: Inference dataset is empty.")
+            print("Please check:")
+            print(f"  1. CSV file format and content: {args.csv_path}")
+            print(f"  2. Data directory structure: {args.data_root_dir}")
+            print("  3. File paths in CSV are correct relative to data_root_dir")
             return
 
         inference_loader = DataLoader(
@@ -275,16 +242,21 @@ def run_inference(args):
             batch_size=args.batch_size,
             shuffle=False,
             num_workers=args.num_workers,
-            pin_memory=True,
-            collate_fn=collate_fn_skip_none # Handles None items if dataset __getitem__ returns None
+            pin_memory=True if device.type == 'cuda' else False,
+            collate_fn=collate_fn_skip_none
         )
-        print(f"Inference DataLoader created with {len(inference_dataset)} samples, {len(inference_loader)} batches.")
-    except FileNotFoundError:
-        print(f"Error: Inference CSV file not found at {args.csv_path}")
-        return
+        print(f"Inference DataLoader created successfully:")
+        print(f"  - Dataset size: {len(inference_dataset)} samples")
+        print(f"  - Number of batches: {len(inference_loader)}")
+        print(f"  - Batch size: {args.batch_size}")
+        
     except Exception as e:
         print(f"Error creating DataLoader: {e}")
-        import traceback
+        print("This might be due to:")
+        print("  1. Incorrect CSV format")
+        print("  2. Missing image/mask files")
+        print("  3. Incorrect file paths in CSV")
+        print("Full traceback:")
         traceback.print_exc()
         return
     
